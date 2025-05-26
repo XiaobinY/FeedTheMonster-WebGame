@@ -1,4 +1,4 @@
-const LESSON_WORDS = [
+export const LESSON_WORDS = [
     { lesson: 1, name: "第一课", words: ["大人", "小人", "大哭", "大口", "大笑", "小口"] },
     { lesson: 2, name: "第二课", words: ["爸爸", "妈妈", "上天", "天上", "太大", "太小", "一天", "一月", "二天", "二月", "上上下下"] },
     { lesson: 3, name: "第三课", words: ["天地", "大地", "太阳", "月亮", "星星", "天亮", "大火", "大水", "火星", "水星", "三天", "三月", "下地", "地上", "地下"] },
@@ -22,8 +22,8 @@ const LESSON_WORDS = [
     { lesson: 20, name: "第二十课", words: ["变了", "不变", "变成", "问好", "问人", "再见", "再说", "再去", "再来", "急得", "着急", "大门", "开门", "门口", "一只", "三只"] },
     { lesson: "复习三", name: "课后复习三", words: ["回家", "回来", "回去", "回头", "公公", "公鸡", "打人", "白兔", "兔子", "过来", "过去", "来过", "去过", "好吗", "去吗", "来吗", "游泳", "很高兴", "真快乐", "好开心", "好得很", "对不起", "笑哈哈", "一会儿"] }
 ];
-const NUM_WORDS_TO_DISPLAY = 16;
-const LESSON_WEIGHTS = {
+export const NUM_WORDS_TO_DISPLAY = 16;
+export const LESSON_WEIGHTS = {
     "1": 1, "2": 1, "3": 1, "4": 1, "5": 1,
     "6": 1, "7": 1, "8": 1, "9": 1, "10": 1,
     "复习一": 1,
@@ -32,7 +32,7 @@ const LESSON_WEIGHTS = {
     "17": 0, "18": 0, "19": 0, "20": 0,
     "复习三": 0
 };
-const LESSON_SENTENCES = [
+export const LESSON_SENTENCES = [
     { lesson: 4, name: "第四课", sentences: ["我有好爸爸、好妈妈。", "天上有太阳、月亮、星星。", "地上有土、石、山、水田。", "爸爸上山,妈妈下山。"] },
     { lesson: 5, name: "第五课", sentences: ["地上有小草和大树。", "草地上有水牛和小山羊。", "爸爸和妈妈心中有我。", "我心中有爸爸和妈妈。"] },
     { lesson: 6, name: "第六课", sentences: ["我有小手。", "头上有眉、目、耳、鼻和口。", "眉下有目,鼻下有口。", "树上有花和叶。"] },
@@ -53,12 +53,12 @@ const LESSON_SENTENCES = [
     { lesson: 20, name: "第二十课", sentences: ["我家门口的树上有一只爱唱歌的小黄鸟。他天天都要唱很多好听的歌。", "我问爸爸“早上好”,爸爸对我笑;我问妈妈“早上好”,妈妈说我是好宝宝。", "小鸟在天上飞,叫白云和它一起落到树上。白云说:“我不能落,我一落到树上,就会变成水,不能再飞了。”"] },
     { lesson: "复习三", name: "课后复习三", sentences: ["回家", "回来", "回去", "回头", "公公", "公鸡", "打人", "白兔", "兔子", "过来", "过去", "来过", "去过", "好吗", "去吗", "来吗", "游泳", "很高兴", "真快乐", "好开心", "好得很", "对不起", "笑哈哈", "一会儿"] }
 ];
-const NUM_SENTENCES_TO_DISPLAY = 4; // Base number of sentences
-const SHORT_SENTENCE_THRESHOLD = 15; // Characters to consider a sentence "short"
-const PASTEL_COLORS = [
+export const NUM_SENTENCES_TO_DISPLAY = 4; // Base number of sentences
+export const SHORT_SENTENCE_THRESHOLD = 15; // Characters to consider a sentence "short"
+export const PASTEL_COLORS = [
     "#FFB3B3", "#FFD699", "#FFFFB3", "#B3FFB3", "#B3B3FF", "#D9B3FF",
     "#FFC0CB", "#DDA0DD", "#ADD8E6", "#F0E68C", "#90EE90", "#FFA07A",
     "#FFDAC1", "#E2F0CB", "#C7CEEA", "#FFD1DC", "#B4E0E0", "#FCE8B2",
     "#FFC4E1", "#D9E2FF", "#C4F0C4", "#FFECC4", "#E9D1FF", "#D1FFE9"
 ];
-const WORD_CARD_BACKGROUND_COLOR = '#FFF8DC';
+export const WORD_CARD_BACKGROUND_COLOR = '#FFF8DC';
