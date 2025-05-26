@@ -1,0 +1,570 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我爱学中文 - Interactive Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&family=Ma+Shan+Zheng&family=KaiTi&display=swap" rel="stylesheet">
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Ma Shan Zheng', 'KaiTi', 'Comic Sans MS', 'Comic Neue', cursive, sans-serif;
+            margin: 0;
+            color: #333; 
+            min-height: 100vh;
+            position: relative; 
+            overflow-x: hidden; 
+        }
+
+        body::before {
+            content: "";
+            position: fixed; 
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2; 
+            background: linear-gradient(135deg, #FFD1D1, #FFE7CC, #FFFFD1, #D1FFD1, #D1D1FF, #EAD1FF);
+            background-size: 200% 200%;
+            animation: rainbowBackground 25s ease infinite;
+        }
+
+        body::after {
+            content: "";
+            position: fixed; 
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(255, 255, 255, 0.3); 
+            z-index: -1; 
+            pointer-events: none; 
+        }
+
+        @keyframes rainbowBackground {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Title Bar */
+        .title-bar {
+            padding: 20px; text-align: center;
+            background-color: rgba(255, 255, 255, 0.3); 
+            backdrop-filter: blur(8px); 
+            position: relative; z-index: 1; /* Ensure title-bar has a stacking context */
+        }
+
+        #main-title {
+            font-size: 3rem; 
+            display: inline-block; position: relative; 
+            color: #333333; 
+        }
+        
+        #main-title::before, #main-title::after {
+            content: '✨'; 
+            position: absolute; opacity: 0;
+            font-size: 1.5rem; 
+            animation: sparkle 3s infinite;
+        }
+        #main-title::before { top: -10px; left: -20px; animation-delay: 0s; }
+        #main-title::after { bottom: -10px; right: -20px; animation-delay: 1.5s; }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* Refresh Button */
+        #refresh-content-button {
+            position: absolute;
+            top: 15px; /* Adjust based on title-bar padding and desired look */
+            right: 20px; /* Adjust based on title-bar padding */
+            background-color: #FFF7ED; /* Tailwind orange-50 */
+            border: 2px solid #FB923C; /* Tailwind orange-400 */
+            color: #C2410C; /* Tailwind orange-700 */
+            width: 44px; /* Slightly larger for better touch target */
+            height: 44px;
+            border-radius: 50%; /* Circular */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
+            z-index: 5; /* Ensure it's above other title bar content if any, but below popups */
+        }
+        #refresh-content-button:not(.is-refreshing):hover {
+            background-color: #FFEDD5; /* Tailwind orange-100 */
+            transform: scale(1.05); 
+            box-shadow: 0 3px 7px rgba(0,0,0,0.2);
+        }
+        #refresh-content-button:not(.is-refreshing):hover svg {
+             transform: rotate(30deg);
+        }
+        #refresh-content-button:not(.is-refreshing):active {
+            background-color: #FED7AA; /* Tailwind orange-200 */
+            transform: scale(0.95);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        #refresh-content-button svg {
+            width: 22px; /* Adjusted for new button size */
+            height: 22px;
+            fill: currentColor;
+            transition: transform 0.3s ease;
+        }
+
+        /* Refresh button animation */
+        @keyframes continuous-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #refresh-content-button.is-refreshing {
+            cursor: wait;
+            background-color: #FED7AA; /* Tailwind orange-200 to indicate activity */
+        }
+
+        #refresh-content-button.is-refreshing svg {
+            animation: continuous-spin 0.7s linear infinite;
+        }
+
+        /* Page Refresh Overlay for Glow Effect */
+        #page-refresh-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 215, 0, 0.3); /* Gold with transparency */
+            opacity: 0;
+            z-index: 2000; /* High z-index to cover content */
+            pointer-events: none; /* Allow clicks through when not active */
+            transition: opacity 0.3s ease-in-out;
+        }
+        #page-refresh-overlay.active {
+            opacity: 1;
+            pointer-events: auto; /* Block clicks when active if desired, or keep as none */
+        }
+
+
+        /* Lesson Selector Trigger Styling */
+        .lesson-selector-trigger-container {
+            text-align: center;
+            padding: 15px 0 10px 0; /* Reduced bottom padding */
+            position: relative; 
+            z-index: 10; 
+        }
+        #lesson-selector-trigger {
+            font-family: 'Ma Shan Zheng', 'KaiTi', 'Comic Sans MS', 'Comic Neue', cursive, sans-serif;
+            padding: 10px 18px; 
+            border-radius: 10px; 
+            border: 2px solid #fb923c; 
+            background-color: #fff7ed; 
+            font-size: 1.2rem; 
+            color: #c2410c; 
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+            display: inline-block; 
+        }
+        #lesson-selector-trigger:hover {
+            background-color: #ffedd5; 
+            box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+        }
+        #lesson-selector-trigger .arrow-down {
+            display: inline-block;
+            margin-left: 8px;
+            transition: transform 0.3s ease;
+        }
+        #lesson-selector-trigger.popup-open .arrow-down {
+            transform: rotate(180deg);
+        }
+
+        /* Mode Switcher Styling */
+        #mode-switcher-container {
+            text-align: center;
+            padding: 10px 0 20px 0; /* Added padding */
+            position: relative;
+            z-index: 9; /* Below lesson selector popup */
+        }
+        .mode-button {
+            font-family: 'Ma Shan Zheng', 'KaiTi', 'Comic Sans MS', 'Comic Neue', cursive, sans-serif;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            background-color: #FEF3C7; /* Tailwind amber-100 */
+            color: #92400E; /* Tailwind amber-700 */
+            border-color: #FCD34D; /* Tailwind amber-300 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .mode-button:hover {
+            background-color: #FDE68A; /* Tailwind amber-200 */
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+        .mode-button.active-mode {
+            background-color: #F59E0B; /* Tailwind amber-500 */
+            color: white;
+            border-color: #F59E0B; /* Tailwind amber-500 */
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1) inset;
+        }
+        .mode-button svg { /* Style for potential icons */
+            width: 1.1em;
+            height: 1.1em;
+            margin-right: 0.4em;
+            vertical-align: -0.15em;
+        }
+
+
+        /* Lesson Grid Popup Styling */
+        #lesson-grid-popup {
+            display: none; 
+            position: fixed; 
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px; 
+            max-height: 80vh; 
+            overflow-y: auto; 
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 1000; 
+            padding: 25px;
+            border: 1px solid #e5e7eb; 
+        }
+        #lesson-grid-popup.active {
+            display: block; 
+        }
+        .lesson-grid-popup-header {
+            font-size: 1.5rem;
+            color: #1f2937; 
+            margin-bottom: 20px;
+            text-align: center;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 15px;
+        }
+        .lesson-grid-popup-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        .lesson-popup-button {
+            font-family: 'Ma Shan Zheng', 'KaiTi', 'Comic Sans MS', 'Comic Neue', cursive, sans-serif;
+            padding: 12px 8px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db; 
+            background-color: #f9fafb; 
+            font-size: 1rem;
+            color: #374151; 
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            line-height: 1.2;
+        }
+        .lesson-popup-button:hover {
+            background-color: #f3f4f6; 
+            transform: translateY(-2px);
+        }
+        .lesson-popup-button.current { 
+            background-color: #fdba74; 
+            color: #7c2d12; 
+            font-weight: bold;
+            border-color: #fb923c; 
+        }
+        .popup-overlay { 
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            z-index: 999; 
+        }
+        .popup-overlay.active {
+            display: block;
+        }
+
+
+        /* Section Styling */
+        section {
+            padding: 20px; margin: 20px auto;
+            background-color: rgba(255, 255, 255, 0.9); 
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
+            max-width: 90%; 
+            position: relative; z-index: 1;
+        }
+        
+        h2 { 
+            font-size: clamp(1.5rem, 4.5vw, 3rem); 
+            color: #333333; 
+            text-align: center; margin-bottom: 20px; 
+            border-bottom: 2px solid; padding-bottom: 10px; 
+            border-image-slice: 1;
+            border-image-source: linear-gradient(to right, #FFB3B3, #FFD699, #FFFFB3, #B3FFB3, #B3B3FF, #D9B3FF);
+        }
+
+        /* Word Section - Flip Cards CSS */
+        #word-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 8px; 
+            padding: 10px; 
+            min-height: 100px; 
+        }
+
+        .flip-card { 
+            background-color: transparent;
+            aspect-ratio: 3 / 2; 
+            perspective: 1000px; 
+            cursor: pointer;
+            border-radius: 10px;
+            position: relative; 
+        }
+
+        .flip-card-inner { 
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.7s; 
+            transform-style: preserve-3d;
+            border-radius: 10px; 
+        }
+
+        .flip-card.flipped .flip-card-inner { 
+            transform: rotateY(180deg);
+        }
+
+        .flip-card-front, .flip-card-back { 
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden; 
+            backface-visibility: hidden; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .flip-card-front { 
+            background-color: #FFF8DC; 
+            color: #333333;
+            font-size: clamp(1.4rem, 4vw, 2.8rem); 
+            transform: rotateY(180deg); 
+            padding: 5px; 
+            overflow-wrap: break-word; 
+            word-break: break-all; 
+            line-height: 1.25; 
+        }
+
+        .flip-card-back { 
+            color: white; 
+            font-size: 1rem; 
+        }
+        
+        .mini-rainbow-icon {
+            width: 30px; 
+            height: 15px; 
+        }
+
+        /* Effects for already-flipped cards */
+        .card-wiggle {
+            animation: card-wiggle-animation 0.5s ease-in-out;
+        }
+
+        @keyframes card-wiggle-animation {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-4deg) scale(1.03); }
+            75% { transform: rotate(4deg) scale(1.03); }
+        }
+
+        .flip-card.sparkling::before,
+        .flip-card.sparkling::after {
+            content: '✨';
+            position: absolute;
+            font-size: clamp(1rem, 3vw, 1.5rem); 
+            opacity: 0;
+            animation: sparkle-pop 0.6s ease-out forwards;
+            z-index: 10; 
+            pointer-events: none; 
+        }
+
+        .flip-card.sparkling::before {
+            top: 5%;
+            left: 5%;
+            animation-delay: 0s;
+        }
+
+        .flip-card.sparkling::after {
+            bottom: 5%;
+            right: 5%;
+            animation-delay: 0.1s; 
+        }
+
+        @keyframes sparkle-pop {
+            0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            30% { opacity: 1; transform: scale(1.3) rotate(-10deg); }
+            60% { opacity: 1; transform: scale(1.1) rotate(10deg); }
+            100% { opacity: 0; transform: scale(0.8) rotate(0deg); }
+        }
+        
+        /* Sentence Section - Scratch-Off */
+        #sentence-list {
+            display: flex; flex-direction: column;
+            gap: 15px; 
+            min-height: 100px; 
+        }
+        .sentence-container {
+            position: relative; 
+            background-color: #E0E0E0; 
+            border-radius: 10px; 
+            padding: 15px; 
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.15); 
+            min-height: 70px; 
+            display: flex; align-items: center; justify-content: center;
+            transition: background-color 0.3s ease-in-out; 
+        }
+        .sentence-canvas {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            cursor: grab; border-radius: 10px; 
+        }
+        .sentence-text-underneath {
+            font-size: clamp(1.2rem, 3.2vw, 2.5rem); 
+            color: #222222; 
+            text-align: center; visibility: hidden; 
+            padding: 5px; 
+            z-index: 0;
+            line-height: 1.35; 
+        }
+        
+        /* Mini Game Area */
+        #mini-game-section p {
+            text-align: center; font-size: 1.2rem; color: #555; 
+        }
+
+        /* Utility class for hiding sections */
+        .hidden-view {
+            display: none !important;
+        }
+
+        /* Responsive adjustments */
+        @media (min-width: 768px) { 
+            #word-grid {
+                grid-template-columns: repeat(4, 1fr); 
+                gap: 10px; 
+            }
+        }
+
+        @media (max-width: 1024px) { 
+            h2 { font-size: clamp(1.4rem, 4vw, 2.5rem); }
+            .flip-card-front { font-size: clamp(1.3rem, 4.5vw, 2.5rem); }
+            .sentence-text-underneath { font-size: clamp(1.1rem, 3.8vw, 2.2rem); }
+            .lesson-grid-popup-content { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+            .mode-button { font-size: 1.1rem; padding: 9px 18px; }
+        }
+
+        @media (max-width: 768px) { 
+            #main-title { font-size: 2.5rem; } 
+            h2 { font-size: clamp(1.3rem, 5vw, 2.2rem); } 
+            .flip-card-front { font-size: clamp(1.4rem, 8vw, 2.8rem); } 
+            .sentence-text-underneath { font-size: clamp(1rem, 4.5vw, 2rem); } 
+            #lesson-grid-popup { width: 95%; padding: 20px; }
+            .lesson-grid-popup-content { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+            .lesson-popup-button { font-size: 0.9rem; padding: 10px 6px; }
+            #lesson-selector-trigger { font-size: 1.1rem; padding: 8px 14px; }
+            #refresh-content-button { top: 10px; right: 15px; width: 40px; height: 40px; }
+            #refresh-content-button svg { width: 20px; height: 20px; }
+            .mode-button { font-size: 1rem; padding: 8px 15px; }
+        }
+        
+        @media (max-width: 480px) { 
+            body::before { background: linear-gradient(135deg, #FFD1D1, #FFE7CC, #FFFFD1, #D1FFD1, #D1D1FF, #EAD1FF); } 
+            body::after { background-color: rgba(255, 255, 255, 0.2); }
+            #main-title { font-size: 2rem; } 
+            #main-title::before, #main-title::after { display: none; } 
+            h2 { font-size: clamp(1.2rem, 6vw, 2rem); } 
+            .flip-card-front { font-size: clamp(1.2rem, 8.5vw, 2.5rem); } 
+            .sentence-text-underneath { font-size: clamp(0.9rem, 5.5vw, 1.6rem); } 
+            section { padding: 15px; margin: 10px auto; max-width: 95%; }
+            #lesson-grid-popup { padding: 15px; }
+            .lesson-grid-popup-header { font-size: 1.3rem; margin-bottom: 15px; padding-bottom: 10px; }
+            .lesson-grid-popup-content { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px; }
+            .lesson-popup-button { font-size: 0.85rem; padding: 8px 5px; }
+            #lesson-selector-trigger { font-size: 1rem; padding: 8px 12px; }
+            #refresh-content-button { top: 8px; right: 10px; width: 36px; height: 36px; }
+            #refresh-content-button svg { width: 18px; height: 18px; }
+            .mode-button { font-size: 0.9rem; padding: 7px 12px; margin: 0 3px;}
+             #mode-switcher-container { padding: 8px 0 15px 0; }
+        }
+    </style>
+</head>
+<body> 
+    <header class="title-bar">
+        <h1 id="main-title" class="text-4xl md:text-5xl lg:text-6xl">我爱学中文</h1>
+        <button id="refresh-content-button" aria-label="Refresh content" title="Refresh words and sentences">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill-rule="evenodd" clip-rule="evenodd">
+                <path d="M12 0c-3.315 0-6.292 1.352-8.485 3.546l-3.515-3.546v7h7l-2.852-2.888c1.651-1.497 3.798-2.378 6.049-2.378 4.418 0 7.997 3.581 7.997 7.999s-3.579 7.999-7.997 7.999c-3.036 0-5.707-1.704-7.041-4.273l-1.899 1.072c1.669 2.964 4.937 5.001 8.584 5.001 5.522 0 9.997-4.477 9.997-10s-4.475-10-9.997-10z"/>
+            </svg>
+        </button>
+    </header>
+
+    <div class="lesson-selector-trigger-container">
+        <button id="lesson-selector-trigger" aria-haspopup="true" aria-expanded="false">
+            <span id="current-lesson-name-display"></span>
+            <span class="arrow-down">▼</span>
+        </button>
+    </div>
+
+    <div id="mode-switcher-container">
+        <button id="learn-mode-button" class="mode-button" aria-pressed="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM17 6H7v2h10V6zm-4 4H7v2h6v-2zm4 4H7v2h10v-2z"></path></svg>
+            学习
+        </button>
+        <button id="play-mode-button" class="mode-button" aria-pressed="false">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.5 9.33A4.001 4.001 0 0 0 15 4H9a4 4 0 0 0-3.5 5.33L2 13v4l2 2h5v-2H5.71l1.5-1.5a5.98 5.98 0 0 1 4.79-.5a5.98 5.98 0 0 1 4.79.5l1.5 1.5H17v2h5l2-2v-4l-3.5-3.67zM9 6h6a2 2 0 0 1 2 2v1H7V8a2 2 0 0 1 2-2zm11 9.46L18.29 17H14a4 4 0 0 0-4-4a4 4 0 0 0-4 4H5.71L4 15.46V14l2.5-2.67A2.003 2.003 0 0 1 9 10h6a2 2 0 0 1 2.5 1.33L20 14v1.46zM12 15a1 1 0 1 1 0-2a1 1 0 0 1 0 2z"></path></svg>
+            游戏
+        </button>
+    </div>
+
+    <div id="popup-overlay" class="popup-overlay"></div>
+    <div id="lesson-grid-popup" role="dialog" aria-modal="true" aria-labelledby="lesson-popup-title">
+        <h3 id="lesson-popup-title" class="lesson-grid-popup-header">选择一个课程</h3>
+        <div id="lesson-grid-popup-content" class="lesson-grid-popup-content">
+            <!-- Content dynamically populated by JS -->
+        </div>
+    </div>
+
+    <main class="container mx-auto p-4">
+        <div id="learn-content">
+            <section id="word-section" aria-labelledby="word-section-title" class="my-5">
+                <h2 id="word-section-title" class="text-3xl md:text-4xl">认字</h2>
+                <div id="word-grid" class="mt-5">
+                    <!-- Content dynamically populated by JS -->
+                </div>
+            </section>
+
+            <section id="sentence-section" aria-labelledby="sentence-section-title" class="my-5">
+                <h2 id="sentence-section-title" class="text-3xl md:text-4xl">读句子</h2>
+                <div id="sentence-list" class="mt-5">
+                    <!-- Content dynamically populated by JS -->
+                </div>
+            </section>
+        </div>
+
+        <section id="mini-game-section" aria-labelledby="mini-game-title" class="my-5 hidden-view">
+            <h2 id="mini-game-title" class="text-3xl md:text-4xl">小游戏</h2>
+            <p class="text-xl text-gray-600 mt-5">敬请期待! (Coming Soon!)</p>
+        </section>
+    </main>
+    
+    <div id="page-refresh-overlay"></div> <!-- Overlay for refresh effect -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="index.js"></script> 
+</body>
+</html>
