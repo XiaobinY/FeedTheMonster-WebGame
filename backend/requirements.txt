@@ -1,0 +1,4 @@
+Flask==2.3.2
+gunicorn  # Add gunicorn here
+# google-cloud-storage==2.10.0  # If you need to store data in Cloud Storage
+# Add any other dependencies you might need
