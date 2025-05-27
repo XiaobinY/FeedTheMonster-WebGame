@@ -29,6 +29,7 @@ let learnModeButton;
 let playModeButton;
 let learnContentArea;
 let miniGameSection;
+let gameCanvas; // Added for the mini-game
 
 // --- Helper Functions ---
 function getRandomElements(arr, count) {
@@ -375,7 +376,84 @@ function switchMode(newMode) {
         
         miniGameSection.classList.remove('hidden-view');
         learnContentArea.classList.add('hidden-view');
+        drawMiniGame(gameCanvas);
     }
+}
+
+function drawMiniGame(canvas) {
+    if (!canvas) {
+        console.warn("drawMiniGame called without a canvas element.");
+        return;
+    }
+    // Match canvas internal resolution to its display size
+    if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error("Failed to get 2D context from canvas.");
+        return;
+    }
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Ground
+    const groundHeight = 50;
+    ctx.fillStyle = '#8B4513'; // SaddleBrown
+    ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+
+    // Draw Grass
+    ctx.fillStyle = '#228B22'; // ForestGreen
+    const grassBladeHeight = 10;
+    const grassBladeWidth = 4;
+    for (let i = 0; i < canvas.width; i += (grassBladeWidth + 7)) { // Adjust spacing as needed
+        ctx.fillRect(i, canvas.height - groundHeight - grassBladeHeight, grassBladeWidth, grassBladeHeight);
+    }
+
+    // Draw Monster
+    const monsterWidth = 40;
+    const monsterHeight = 60;
+    const monsterX = (canvas.width - monsterWidth) / 2;
+    const monsterY = canvas.height - groundHeight - monsterHeight;
+    const cornerRadius = 10;
+
+    ctx.fillStyle = '#FF69B4'; // HotPink
+
+    // Rounded rectangle for body
+    ctx.beginPath();
+    ctx.moveTo(monsterX + cornerRadius, monsterY);
+    ctx.lineTo(monsterX + monsterWidth - cornerRadius, monsterY);
+    ctx.quadraticCurveTo(monsterX + monsterWidth, monsterY, monsterX + monsterWidth, monsterY + cornerRadius);
+    ctx.lineTo(monsterX + monsterWidth, monsterY + monsterHeight - cornerRadius);
+    ctx.quadraticCurveTo(monsterX + monsterWidth, monsterY + monsterHeight, monsterX + monsterWidth - cornerRadius, monsterY + monsterHeight);
+    ctx.lineTo(monsterX + cornerRadius, monsterY + monsterHeight);
+    ctx.quadraticCurveTo(monsterX, monsterY + monsterHeight, monsterX, monsterY + monsterHeight - cornerRadius);
+    ctx.lineTo(monsterX, monsterY + cornerRadius);
+    ctx.quadraticCurveTo(monsterX, monsterY, monsterX + cornerRadius, monsterY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw Monster Eyes (Round)
+    ctx.fillStyle = '#FFFFFF'; // White
+    const eyeRadius = 4;
+    const eyeOffsetX = 12;
+    const eyeOffsetY = 20;
+    // Left Eye
+    ctx.beginPath();
+    ctx.arc(monsterX + eyeOffsetX, monsterY + eyeOffsetY, eyeRadius, 0, Math.PI * 2, true);
+    ctx.fill();
+    // Right Eye
+    ctx.beginPath();
+    ctx.arc(monsterX + monsterWidth - eyeOffsetX, monsterY + eyeOffsetY, eyeRadius, 0, Math.PI * 2, true);
+    ctx.fill();
+
+    // Draw Monster Smile
+    ctx.strokeStyle = '#FFFFFF'; // White stroke for smile
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(monsterX + monsterWidth / 2, monsterY + monsterHeight / 2 + 10, 10, 0, Math.PI, false); // Smile (mouth open downwards)
+    ctx.stroke();
 }
 
 
@@ -393,6 +471,7 @@ window.addEventListener('load', () => {
     playModeButton = document.getElementById('play-mode-button');
     learnContentArea = document.getElementById('learn-content');
     miniGameSection = document.getElementById('mini-game-section');
+    gameCanvas = document.getElementById('gameCanvas'); // Initialize gameCanvas
 
     initializeAudio(); 
     setupTitleBar();
@@ -440,8 +519,9 @@ window.addEventListener('load', () => {
                     if (currentActiveMode === 'learn') {
                         loadLessonContent(currentSelectedLessonId);
                     } else if (currentActiveMode === 'play') {
-                        // Placeholder for refreshing game content if/when it becomes dynamic
-                        console.log("Refreshing play mode (currently static).");
+                        if (gameCanvas) { // Add a check for gameCanvas
+                            drawMiniGame(gameCanvas);
+                        }
                     }
 
                 } catch (e) {
@@ -476,13 +556,17 @@ window.addEventListener('load', () => {
     loadLessonContent(currentSelectedLessonId); // Initial content load for learn mode
 
     window.addEventListener('resize', () => {
-        const sentenceList = document.getElementById('sentence-list');
-        if (currentActiveMode === 'learn' && sentenceList && sentenceList.innerHTML !== '' && sentenceList.textContent && !sentenceList.textContent.startsWith("请选择课程")) {
-             if (!lessonGridPopup || !lessonGridPopup.classList.contains('active')) {
-                const currentSentencesElements = Array.from(sentenceList.querySelectorAll('.sentence-text-underneath'))
-                                                    .map(el => el.textContent || "");
-                populateSentenceSection(currentSentencesElements);
+        if (currentActiveMode === 'learn') {
+            const sentenceList = document.getElementById('sentence-list');
+            if (sentenceList && sentenceList.innerHTML !== '' && sentenceList.textContent && !sentenceList.textContent.startsWith("请选择课程")) {
+                if (!lessonGridPopup || !lessonGridPopup.classList.contains('active')) {
+                    const currentSentencesElements = Array.from(sentenceList.querySelectorAll('.sentence-text-underneath'))
+                                                        .map(el => el.textContent || "");
+                    populateSentenceSection(currentSentencesElements);
+                }
             }
+        } else if (currentActiveMode === 'play' && gameCanvas) {
+            drawMiniGame(gameCanvas);
         }
     });
 });

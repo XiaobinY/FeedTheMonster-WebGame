@@ -437,6 +437,17 @@ h2 {
     text-align: center; font-size: 1.2rem; color: #555; 
 }
 
+#gameCanvas {
+    display: block;
+    margin: 20px auto;
+    width: 80%;
+    max-width: 400px; /* Added max-width for better control on large screens */
+    height: 300px;
+    border: 2px solid #666;
+    background-color: #f0f8ff; /* AliceBlue */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Optional: adds a subtle shadow */
+}
+
 /* Utility class for hiding sections */
 .hidden-view {
     display: none !important;
