@@ -26,6 +26,7 @@ const GAME_STATES = {
 let currentGameState = GAME_STATES.READY;
 let startButtonRect = null; // To store dimensions and position of the start button
 let pauseButtonRect = null; // To store dimensions and position of the pause button
+let playAgainButtonRect = null; // To store dimensions and position of the play again button
 let gameTimer = null;
 let remainingTime = 0; // in seconds
 const GAME_DURATION = 5; // 5 seconds
@@ -485,33 +486,45 @@ function drawGameStateIndicator(ctx, canvas) {
 function drawMonsterAndScene(ctx, canvas) {
     // Proportional dimensions (copied from original drawMiniGame)
     const groundHeight = canvas.height * 0.1;
-    const grassBladeHeight = groundHeight * 0.2;
+    const grassBladeHeight = groundHeight * 0.2; // Base height, will be varied
     const grassBladeWidth = Math.max(2, canvas.width * 0.01);
-    const grassBladeSpacing = canvas.width * 0.02;
+    const grassBladeSpacing = canvas.width * 0.015; // Adjusted spacing for potentially wider/varied blades
     const monsterWidth = canvas.width * 0.12;
     const monsterHeight = canvas.height * 0.20;
     const monsterX = (canvas.width - monsterWidth) / 2;
     const monsterY = canvas.height - groundHeight - monsterHeight;
-    const monsterCornerRadius = monsterWidth * 0.25;
-    const eyeRadius = Math.max(2, monsterWidth * 0.1);
+    const monsterCornerRadius = monsterWidth * 0.45; // Increased for rounder body
+    const eyeRadius = Math.max(3, monsterWidth * 0.15); // Increased eye radius
     const eyeOffsetX = monsterWidth * 0.3;
-    const eyeOffsetY = monsterHeight * 0.33;
-    const smileLineWidth = Math.max(1, monsterWidth * 0.05);
-    const smileRadius = monsterWidth * 0.25;
-    const smileCenterYOffset = monsterHeight * 0.15;
+    const eyeOffsetY = monsterHeight * 0.33; // Adjusted Y position slightly for larger eyes if needed
+    const smileLineWidth = Math.max(2, monsterWidth * 0.07); // Increased smile line width
+    const smileRadius = monsterWidth * 0.25; // May need adjustment
+    const smileCenterYOffset = monsterHeight * 0.15; // May need adjustment
 
     // Draw Ground
     ctx.fillStyle = '#8B4513'; // SaddleBrown
     ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
 
     // Draw Grass
-    ctx.fillStyle = '#228B22'; // ForestGreen
+    ctx.fillStyle = '#7CFC00'; // LawnGreen
     for (let i = 0; i < canvas.width; i += (grassBladeWidth + grassBladeSpacing)) {
-        ctx.fillRect(i, canvas.height - groundHeight - grassBladeHeight, grassBladeWidth, grassBladeHeight);
+        // Draw slightly tapered or rounded blades
+        const bladeBaseY = canvas.height - groundHeight;
+        const bladeTopY = bladeBaseY - grassBladeHeight * (0.8 + Math.random() * 0.4); // Vary height
+        const bladeTopWidth = grassBladeWidth * 0.6;
+        const bladeBaseX = i;
+        
+        ctx.beginPath();
+        ctx.moveTo(bladeBaseX, bladeBaseY);
+        ctx.lineTo(bladeBaseX + grassBladeWidth, bladeBaseY);
+        ctx.lineTo(bladeBaseX + grassBladeWidth - (grassBladeWidth - bladeTopWidth) / 2, bladeTopY);
+        ctx.lineTo(bladeBaseX + (grassBladeWidth - bladeTopWidth) / 2, bladeTopY);
+        ctx.closePath();
+        ctx.fill();
     }
 
     // Draw Monster Body
-    ctx.fillStyle = '#FF69B4'; // HotPink
+    ctx.fillStyle = '#87CEFA'; // LightSkyBlue
     ctx.beginPath();
     ctx.moveTo(monsterX + monsterCornerRadius, monsterY);
     ctx.lineTo(monsterX + monsterWidth - monsterCornerRadius, monsterY);
@@ -530,8 +543,38 @@ function drawMonsterAndScene(ctx, canvas) {
     ctx.beginPath();
     ctx.arc(monsterX + eyeOffsetX, monsterY + eyeOffsetY, eyeRadius, 0, Math.PI * 2, true);
     ctx.fill();
+
+    // Pupil for the first eye
+    let pupilRadius = eyeRadius * 0.5;
+    let pupilX = monsterX + eyeOffsetX;
+    let pupilY = monsterY + eyeOffsetY;
+    ctx.fillStyle = '#000000'; // Black for pupil
+    ctx.beginPath();
+    ctx.arc(pupilX, pupilY, pupilRadius, 0, Math.PI * 2, true);
+    ctx.fill();
+    // Tiny highlight for the first eye
+    ctx.fillStyle = '#FFFFFF'; // White for highlight
+    ctx.beginPath();
+    ctx.arc(pupilX + pupilRadius * 0.3, pupilY - pupilRadius * 0.3, pupilRadius * 0.3, 0, Math.PI * 2, true);
+    ctx.fill();
+
+    // Original white part of the second eye
+    ctx.fillStyle = '#FFFFFF'; // White
     ctx.beginPath();
     ctx.arc(monsterX + monsterWidth - eyeOffsetX, monsterY + eyeOffsetY, eyeRadius, 0, Math.PI * 2, true);
+    ctx.fill();
+    
+    // Pupil for the second eye
+    pupilX = monsterX + monsterWidth - eyeOffsetX; // Update pupilX for the second eye
+    // pupilY remains the same
+    ctx.fillStyle = '#000000'; // Black for pupil
+    ctx.beginPath();
+    ctx.arc(pupilX, pupilY, pupilRadius, 0, Math.PI * 2, true);
+    ctx.fill();
+    // Tiny highlight for the second eye
+    ctx.fillStyle = '#FFFFFF'; // White for highlight
+    ctx.beginPath();
+    ctx.arc(pupilX + pupilRadius * 0.3, pupilY - pupilRadius * 0.3, pupilRadius * 0.3, 0, Math.PI * 2, true);
     ctx.fill();
 
     // Draw Monster Smile
@@ -544,7 +587,7 @@ function drawMonsterAndScene(ctx, canvas) {
 
 function drawReadyScreen(ctx, canvas) {
     // Semi-transparent overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; // Keep the semi-transparent overlay for focus
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Panel dimensions
@@ -555,8 +598,8 @@ function drawReadyScreen(ctx, canvas) {
     const cornerRadius = 20;
 
     // Draw panel
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; // Lightly transparent white
-    ctx.strokeStyle = '#FDBA74'; // Tailwind orange-300
+    ctx.fillStyle = SCREEN_COLORS.panelBackground;
+    ctx.strokeStyle = SCREEN_COLORS.panelBorder;
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(panelX + cornerRadius, panelY);
@@ -575,7 +618,7 @@ function drawReadyScreen(ctx, canvas) {
     // Title
     const titleText = '喂饱小怪兽';
     ctx.font = `bold ${canvas.width * 0.06}px "Ma Shan Zheng", "KaiTi", sans-serif`;
-    ctx.fillStyle = '#D9534F'; // Reddish color
+    ctx.fillStyle = SCREEN_COLORS.titleText;
     ctx.textAlign = 'center';
     ctx.fillText(titleText, canvas.width / 2, panelY + panelHeight * 0.25);
 
@@ -590,8 +633,8 @@ function drawReadyScreen(ctx, canvas) {
     // Store button dimensions for click detection
     startButtonRect = { x: buttonX, y: buttonY, width: buttonWidth, height: buttonHeight };
 
-    ctx.fillStyle = '#5CB85C'; // Greenish color
-    ctx.strokeStyle = '#4CAE4C'; // Darker green for border
+    ctx.fillStyle = SCREEN_COLORS.buttonBackground;
+    ctx.strokeStyle = SCREEN_COLORS.buttonBorder;
     ctx.lineWidth = 3;
     // Draw button background
     ctx.beginPath();
@@ -610,7 +653,7 @@ function drawReadyScreen(ctx, canvas) {
 
     // Button text
     ctx.font = `bold ${buttonHeight * 0.5}px "Ma Shan Zheng", "KaiTi", sans-serif`;
-    ctx.fillStyle = '#FFFFFF'; // White text
+    ctx.fillStyle = SCREEN_COLORS.buttonText;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(buttonText, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
@@ -725,6 +768,20 @@ function drawMiniGame(canvas) {
         console.warn("drawMiniGame called without a canvas element.");
         return;
     }
+
+    if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
+        // Canvas is not visible or has no dimensions, defer drawing.
+        console.warn("Canvas dimensions are 0, deferring drawMiniGame.");
+        requestAnimationFrame(() => {
+            // Attempt to redraw. It's crucial that 'canvas' is still the correct element.
+            // If game state or mode could change by the next frame, this might need more robust handling,
+            // but for now, a simple deferred call should work for the tab switch issue.
+            if (currentActiveMode === 'play') { // Only redraw if still in play mode
+                drawMiniGame(canvas);
+            }
+        });
+        return; // Stop current drawing execution.
+    }
     // Match canvas internal resolution to its display size
     if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
         canvas.width = canvas.clientWidth;
@@ -738,40 +795,105 @@ function drawMiniGame(canvas) {
     // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Reset all button rects at the beginning of each draw call
+    startButtonRect = null;
+    pauseButtonRect = null;
+    playAgainButtonRect = null;
+
     if (currentGameState === GAME_STATES.READY) {
         drawReadyScreen(ctx, canvas);
-        pauseButtonRect = null; 
     } else if (currentGameState === GAME_STATES.RUNNING) {
-        startButtonRect = null;
         drawMonsterAndScene(ctx, canvas);
         drawPauseButton(ctx, canvas);
         drawTimerDisplay(ctx, canvas);
     } else if (currentGameState === GAME_STATES.PAUSED) {
-        startButtonRect = null;
         drawMonsterAndScene(ctx, canvas); 
-        // Optional: Add a visual cue for pause, like dimming, if desired later.
-        // For now, just the scene, resume button, and timer are shown.
         drawResumeButton(ctx, canvas);
         drawTimerDisplay(ctx, canvas);
     } else if (currentGameState === GAME_STATES.END) {
-        startButtonRect = null;
-        pauseButtonRect = null; // Ensure no interactive buttons from other states
-        drawMonsterAndScene(ctx, canvas); // Show the final scene
+        drawMonsterAndScene(ctx, canvas); // Show the final scene (monster, ground etc.)
         drawTimerDisplay(ctx, canvas); // Show timer at 0
-
-        // Game Over Message
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, canvas.height * 0.3, canvas.width, canvas.height * 0.4); // Background for message
-        
-        ctx.font = `bold ${canvas.width * 0.1}px "Ma Shan Zheng", "KaiTi", sans-serif`;
-        ctx.fillStyle = '#D9534F'; // Reddish color like the title
-        ctx.textAlign = 'center';
-        ctx.fillText('游戏结束', canvas.width / 2, canvas.height / 2); // "Game Over"
-        ctx.textAlign = 'left'; // Reset
+        drawEndScreen(ctx, canvas); // Draw the "Play Again" screen
     }
 
     // Draw game state indicator (should be on top of everything)
     drawGameStateIndicator(ctx, canvas);
+}
+
+// --- Drawing End Screen ---
+function drawEndScreen(ctx, canvas) {
+    // Semi-transparent overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Panel dimensions (same as drawReadyScreen for consistency)
+    const panelWidth = canvas.width * 0.7;
+    const panelHeight = canvas.height * 0.6;
+    const panelX = (canvas.width - panelWidth) / 2;
+    const panelY = (canvas.height - panelHeight) / 2;
+    const cornerRadius = 20;
+
+    // Draw panel
+    ctx.fillStyle = SCREEN_COLORS.panelBackground;
+    ctx.strokeStyle = SCREEN_COLORS.panelBorder;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(panelX + cornerRadius, panelY);
+    ctx.lineTo(panelX + panelWidth - cornerRadius, panelY);
+    ctx.quadraticCurveTo(panelX + panelWidth, panelY, panelX + panelWidth, panelY + cornerRadius);
+    ctx.lineTo(panelX + panelWidth, panelY + panelHeight - cornerRadius);
+    ctx.quadraticCurveTo(panelX + panelWidth, panelY + panelHeight, panelX + panelWidth - cornerRadius, panelY + panelHeight);
+    ctx.lineTo(panelX + cornerRadius, panelY + panelHeight);
+    ctx.quadraticCurveTo(panelX, panelY + panelHeight, panelX, panelY + panelHeight - cornerRadius);
+    ctx.lineTo(panelX, panelY + cornerRadius);
+    ctx.quadraticCurveTo(panelX, panelY, panelX + cornerRadius, panelY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Title
+    const titleText = '太棒了!'; // "Well done!"
+    ctx.font = `bold ${canvas.width * 0.06}px "Ma Shan Zheng", "KaiTi", sans-serif`;
+    ctx.fillStyle = SCREEN_COLORS.titleText;
+    ctx.textAlign = 'center';
+    ctx.fillText(titleText, canvas.width / 2, panelY + panelHeight * 0.25);
+
+    // "Play Again" Button
+    const buttonText = '再玩一次';
+    const buttonWidth = panelWidth * 0.5; 
+    const buttonHeight = panelHeight * 0.2; 
+    const buttonX = (canvas.width - buttonWidth) / 2;
+    const buttonY = panelY + panelHeight * 0.55; 
+    const buttonCornerRadius = 10;
+
+    // Store button dimensions for click detection
+    playAgainButtonRect = { x: buttonX, y: buttonY, width: buttonWidth, height: buttonHeight };
+
+    ctx.fillStyle = SCREEN_COLORS.endButtonBackground;
+    ctx.strokeStyle = SCREEN_COLORS.endButtonBorder;
+    ctx.lineWidth = 3;
+    // Draw button background
+    ctx.beginPath();
+    ctx.moveTo(buttonX + buttonCornerRadius, buttonY);
+    ctx.lineTo(buttonX + buttonWidth - buttonCornerRadius, buttonY);
+    ctx.quadraticCurveTo(buttonX + buttonWidth, buttonY, buttonX + buttonWidth, buttonY + buttonCornerRadius);
+    ctx.lineTo(buttonX + buttonWidth, buttonY + buttonHeight - buttonCornerRadius);
+    ctx.quadraticCurveTo(buttonX + buttonWidth, buttonY + buttonHeight, buttonX + buttonWidth - buttonCornerRadius, buttonY + buttonHeight);
+    ctx.lineTo(buttonX + buttonCornerRadius, buttonY + buttonHeight);
+    ctx.quadraticCurveTo(buttonX, buttonY + buttonHeight, buttonX, buttonY + buttonHeight - buttonCornerRadius);
+    ctx.lineTo(buttonX, buttonY + buttonCornerRadius);
+    ctx.quadraticCurveTo(buttonX, buttonY, buttonX + buttonCornerRadius, buttonY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Button text
+    ctx.font = `bold ${buttonHeight * 0.5}px "Ma Shan Zheng", "KaiTi", sans-serif`;
+    ctx.fillStyle = SCREEN_COLORS.buttonText;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(buttonText, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
+    ctx.textBaseline = 'alphabetic'; // Reset baseline
 }
 
 // --- Event Handlers for Game Canvas ---
@@ -800,8 +922,13 @@ function handleGameCanvasClick(event) {
             setGameState(GAME_STATES.RUNNING); // Resume game
             return; // Click handled
         }
+    } else if (currentGameState === GAME_STATES.END && playAgainButtonRect) {
+        if (x >= playAgainButtonRect.x && x <= playAgainButtonRect.x + playAgainButtonRect.width &&
+            y >= playAgainButtonRect.y && y <= playAgainButtonRect.y + playAgainButtonRect.height) {
+            setGameState(GAME_STATES.READY);
+            return; // Click handled
+        }
     }
-    // Potentially other click handlers for different states later
 }
 
 function handleGameCanvasMouseMove(event) {
@@ -825,13 +952,17 @@ function handleGameCanvasMouseMove(event) {
             y >= pauseButtonRect.y && y <= pauseButtonRect.y + pauseButtonRect.height) {
             isOverButton = true;
         }
-    } else if (currentGameState === GAME_STATES.PAUSED && pauseButtonRect) { // Added check for PAUSED state
+    } else if (currentGameState === GAME_STATES.PAUSED && pauseButtonRect) { 
         if (x >= pauseButtonRect.x && x <= pauseButtonRect.x + pauseButtonRect.width &&
             y >= pauseButtonRect.y && y <= pauseButtonRect.y + pauseButtonRect.height) {
             isOverButton = true;
         }
+    } else if (currentGameState === GAME_STATES.END && playAgainButtonRect) {
+        if (x >= playAgainButtonRect.x && x <= playAgainButtonRect.x + playAgainButtonRect.width &&
+            y >= playAgainButtonRect.y && y <= playAgainButtonRect.y + playAgainButtonRect.height) {
+            isOverButton = true;
+        }
     }
-    // Later, add checks for END state buttons if any
 
     gameCanvas.style.cursor = isOverButton ? 'pointer' : 'default';
 }
