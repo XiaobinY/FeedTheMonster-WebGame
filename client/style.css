@@ -443,8 +443,9 @@ h2 {
     width: 90%;
     max-width: 600px; /* Max width to maintain aspect ratio on large screens */
     min-width: 280px; /* Added for smaller screens */
-    height: 80vh;
-    min-height: 500px; /* Added */
+    height: 70vh; /* Changed from 80vh */
+    max-height: min(650px, 85vh); /* Added/Modified */
+    min-height: 500px; /* Ensured present */
     border: 2px solid #666;
     background-color: #f0f8ff; /* AliceBlue */
     box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Optional: adds a subtle shadow */

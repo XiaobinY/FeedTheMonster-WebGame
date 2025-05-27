@@ -11,6 +11,17 @@ import {
     WORD_CARD_BACKGROUND_COLOR
 } from './constants.js';
 
+const SCREEN_COLORS = {
+    panelBackground: 'rgba(255, 240, 150, 0.95)', // Soft Yellow
+    panelBorder: '#FFA500', // Orange
+    titleText: '#D9534F', // Friendly red/orange
+    buttonBackground: '#5CB85C', // Green
+    buttonBorder: '#4CAE4C', // Darker Green
+    buttonText: '#FFFFFF', // White
+    endButtonBackground: '#FF8C00', // Dark Orange for "Play Again"
+    endButtonBorder: '#CD6600' // Darker Orange
+};
+
 // --- Global State ---
 let currentSelectedLessonId = "all_random";
 let currentSelectedLessonName = "所有课程 (随机)";
