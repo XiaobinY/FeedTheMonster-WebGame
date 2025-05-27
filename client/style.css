@@ -440,12 +440,15 @@ h2 {
 #gameCanvas {
     display: block;
     margin: 20px auto;
-    width: 80%;
-    max-width: 400px; /* Added max-width for better control on large screens */
-    height: 300px;
+    width: 90%;
+    max-width: 600px; /* Max width to maintain aspect ratio on large screens */
+    min-width: 280px; /* Added for smaller screens */
+    height: 70vh;
+    max-height: 500px; /* Added */
     border: 2px solid #666;
     background-color: #f0f8ff; /* AliceBlue */
     box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Optional: adds a subtle shadow */
+    border-radius: 15px; /* Added for rounded corners */
 }
 
 /* Utility class for hiding sections */
