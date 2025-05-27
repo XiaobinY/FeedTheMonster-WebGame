@@ -17,6 +17,19 @@ let currentSelectedLessonName = "所有课程 (随机)";
 let isCardEffectAnimating = false; // Flag to prevent spamming card effects
 let currentActiveMode = 'learn'; // 'learn' or 'play'
 
+const GAME_STATES = {
+    READY: 'READY',
+    RUNNING: 'RUNNING',
+    PAUSED: 'PAUSED',
+    END: 'END'
+};
+let currentGameState = GAME_STATES.READY;
+let startButtonRect = null; // To store dimensions and position of the start button
+let pauseButtonRect = null; // To store dimensions and position of the pause button
+let gameTimer = null;
+let remainingTime = 0; // in seconds
+const GAME_DURATION = 5; // 5 seconds
+
 // --- DOM Elements ---
 let lessonSelectorTrigger;
 let currentLessonNameDisplay;
@@ -29,6 +42,7 @@ let learnModeButton;
 let playModeButton;
 let learnContentArea;
 let miniGameSection;
+let gameCanvas; // Added for the mini-game
 
 // --- Helper Functions ---
 function getRandomElements(arr, count) {
@@ -375,9 +389,452 @@ function switchMode(newMode) {
         
         miniGameSection.classList.remove('hidden-view');
         learnContentArea.classList.add('hidden-view');
+        setGameState(GAME_STATES.READY); // Explicitly set to READY
+        // drawMiniGame(gameCanvas); // This will be called by setGameState
     }
 }
 
+// --- Game State Management ---
+function setGameState(newState) {
+    if (currentGameState === newState) return; // Avoid redundant updates
+
+    const oldState = currentGameState;
+    currentGameState = newState;
+    console.log(`Game state changed from ${oldState} to: ${newState}`);
+
+    // If the game is active, trigger a redraw.
+    // The drawMiniGame function will handle drawing based on the new currentGameState.
+    if (currentActiveMode === 'play' && gameCanvas) {
+        drawMiniGame(gameCanvas); // Initial draw for the new state
+    }
+
+    // Game timer logic based on state transitions
+    if (newState === GAME_STATES.RUNNING && oldState === GAME_STATES.READY) {
+        remainingTime = GAME_DURATION;
+        startGameTimer();
+    } else if (newState === GAME_STATES.RUNNING && oldState === GAME_STATES.PAUSED) { // Resuming
+        startGameTimer();
+    } else if (newState === GAME_STATES.PAUSED || newState === GAME_STATES.END) {
+        stopGameTimer();
+    }
+}
+
+// --- Game Timer Functions ---
+function startGameTimer() {
+    stopGameTimer(); // Clear any existing timer before starting a new one
+    gameTimer = setInterval(() => {
+        if (currentGameState === GAME_STATES.RUNNING) { // Only decrement if running
+            remainingTime--;
+            if (remainingTime <= 0) {
+                remainingTime = 0; // Ensure it doesn't go negative
+                setGameState(GAME_STATES.END);
+                return; // Exit interval callback as setGameState(END) will handle drawing
+            }
+            // Redraw to update timer display and other game elements if still RUNNING
+            if (gameCanvas && currentActiveMode === 'play' && currentGameState === GAME_STATES.RUNNING) {
+                 drawMiniGame(gameCanvas);
+            }
+        }
+    }, 1000);
+}
+
+function stopGameTimer() {
+    if (gameTimer) {
+        clearInterval(gameTimer);
+        gameTimer = null;
+    }
+}
+
+// --- Drawing Functions for Timer and End State ---
+function drawTimerDisplay(ctx, canvas) {
+    if (!ctx || !canvas) return;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.font = `bold ${canvas.width * 0.04}px "Ma Shan Zheng", "KaiTi", sans-serif`; // Responsive font size
+    ctx.textAlign = 'center'; // Align to center for top-center position
+    const timerText = `时间: ${remainingTime}s`; // "Time: Xs"
+    // Position at top-center, with a small margin from the top
+    ctx.fillText(timerText, canvas.width / 2, canvas.height * 0.05); 
+    ctx.textAlign = 'left'; // Reset alignment for other functions
+}
+
+function drawGameStateIndicator(ctx, canvas) {
+    if (!ctx || !canvas) return;
+    // Using a more theme-appropriate color and font
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Dark semi-transparent
+    ctx.font = '16px "Ma Shan Zheng", "KaiTi", sans-serif'; // Theme-appropriate font
+    ctx.textAlign = 'left'; // Reset alignment
+    
+    const margin = 10;
+    const textToDraw = `状态: ${currentGameState}`; // Using Chinese for "State"
+
+    // Optional: background for readability
+    const textMetrics = ctx.measureText(textToDraw);
+    const textWidth = textMetrics.width;
+    // Approximate height based on font size (reliable enough for this purpose)
+    const textHeight = parseInt(ctx.font, 10) || 16; 
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)'; // Semi-transparent white background
+    // Adjusted padding for the background box
+    ctx.fillRect(margin - 5, canvas.height - margin - textHeight - 2, textWidth + 10, textHeight + 7); 
+
+    ctx.fillStyle = '#333333'; // Dark gray for text, better contrast on light background
+    ctx.fillText(textToDraw, margin, canvas.height - margin - 2); // Adjusted Y for text baseline
+}
+
+// --- Core Drawing Logic ---
+function drawMonsterAndScene(ctx, canvas) {
+    // Proportional dimensions (copied from original drawMiniGame)
+    const groundHeight = canvas.height * 0.1;
+    const grassBladeHeight = groundHeight * 0.2;
+    const grassBladeWidth = Math.max(2, canvas.width * 0.01);
+    const grassBladeSpacing = canvas.width * 0.02;
+    const monsterWidth = canvas.width * 0.12;
+    const monsterHeight = canvas.height * 0.20;
+    const monsterX = (canvas.width - monsterWidth) / 2;
+    const monsterY = canvas.height - groundHeight - monsterHeight;
+    const monsterCornerRadius = monsterWidth * 0.25;
+    const eyeRadius = Math.max(2, monsterWidth * 0.1);
+    const eyeOffsetX = monsterWidth * 0.3;
+    const eyeOffsetY = monsterHeight * 0.33;
+    const smileLineWidth = Math.max(1, monsterWidth * 0.05);
+    const smileRadius = monsterWidth * 0.25;
+    const smileCenterYOffset = monsterHeight * 0.15;
+
+    // Draw Ground
+    ctx.fillStyle = '#8B4513'; // SaddleBrown
+    ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+
+    // Draw Grass
+    ctx.fillStyle = '#228B22'; // ForestGreen
+    for (let i = 0; i < canvas.width; i += (grassBladeWidth + grassBladeSpacing)) {
+        ctx.fillRect(i, canvas.height - groundHeight - grassBladeHeight, grassBladeWidth, grassBladeHeight);
+    }
+
+    // Draw Monster Body
+    ctx.fillStyle = '#FF69B4'; // HotPink
+    ctx.beginPath();
+    ctx.moveTo(monsterX + monsterCornerRadius, monsterY);
+    ctx.lineTo(monsterX + monsterWidth - monsterCornerRadius, monsterY);
+    ctx.quadraticCurveTo(monsterX + monsterWidth, monsterY, monsterX + monsterWidth, monsterY + monsterCornerRadius);
+    ctx.lineTo(monsterX + monsterWidth, monsterY + monsterHeight - monsterCornerRadius);
+    ctx.quadraticCurveTo(monsterX + monsterWidth, monsterY + monsterHeight, monsterX + monsterWidth - monsterCornerRadius, monsterY + monsterHeight);
+    ctx.lineTo(monsterX + monsterCornerRadius, monsterY + monsterHeight);
+    ctx.quadraticCurveTo(monsterX, monsterY + monsterHeight, monsterX, monsterY + monsterHeight - monsterCornerRadius);
+    ctx.lineTo(monsterX, monsterY + monsterCornerRadius);
+    ctx.quadraticCurveTo(monsterX, monsterY, monsterX + monsterCornerRadius, monsterY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw Monster Eyes
+    ctx.fillStyle = '#FFFFFF'; // White
+    ctx.beginPath();
+    ctx.arc(monsterX + eyeOffsetX, monsterY + eyeOffsetY, eyeRadius, 0, Math.PI * 2, true);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(monsterX + monsterWidth - eyeOffsetX, monsterY + eyeOffsetY, eyeRadius, 0, Math.PI * 2, true);
+    ctx.fill();
+
+    // Draw Monster Smile
+    ctx.strokeStyle = '#FFFFFF'; // White stroke for smile
+    ctx.lineWidth = smileLineWidth;
+    ctx.beginPath();
+    ctx.arc(monsterX + monsterWidth / 2, monsterY + monsterHeight / 2 + smileCenterYOffset, smileRadius, 0, Math.PI, false);
+    ctx.stroke();
+}
+
+function drawReadyScreen(ctx, canvas) {
+    // Semi-transparent overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Panel dimensions
+    const panelWidth = canvas.width * 0.7;
+    const panelHeight = canvas.height * 0.6;
+    const panelX = (canvas.width - panelWidth) / 2;
+    const panelY = (canvas.height - panelHeight) / 2;
+    const cornerRadius = 20;
+
+    // Draw panel
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; // Lightly transparent white
+    ctx.strokeStyle = '#FDBA74'; // Tailwind orange-300
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(panelX + cornerRadius, panelY);
+    ctx.lineTo(panelX + panelWidth - cornerRadius, panelY);
+    ctx.quadraticCurveTo(panelX + panelWidth, panelY, panelX + panelWidth, panelY + cornerRadius);
+    ctx.lineTo(panelX + panelWidth, panelY + panelHeight - cornerRadius);
+    ctx.quadraticCurveTo(panelX + panelWidth, panelY + panelHeight, panelX + panelWidth - cornerRadius, panelY + panelHeight);
+    ctx.lineTo(panelX + cornerRadius, panelY + panelHeight);
+    ctx.quadraticCurveTo(panelX, panelY + panelHeight, panelX, panelY + panelHeight - cornerRadius);
+    ctx.lineTo(panelX, panelY + cornerRadius);
+    ctx.quadraticCurveTo(panelX, panelY, panelX + cornerRadius, panelY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Title
+    const titleText = '喂饱小怪兽';
+    ctx.font = `bold ${canvas.width * 0.06}px "Ma Shan Zheng", "KaiTi", sans-serif`;
+    ctx.fillStyle = '#D9534F'; // Reddish color
+    ctx.textAlign = 'center';
+    ctx.fillText(titleText, canvas.width / 2, panelY + panelHeight * 0.25);
+
+    // Start Button
+    const buttonText = '开始';
+    const buttonWidth = panelWidth * 0.5;
+    const buttonHeight = panelHeight * 0.2;
+    const buttonX = (canvas.width - buttonWidth) / 2;
+    const buttonY = panelY + panelHeight * 0.55; // Positioned lower in the panel
+    const buttonCornerRadius = 10;
+
+    // Store button dimensions for click detection
+    startButtonRect = { x: buttonX, y: buttonY, width: buttonWidth, height: buttonHeight };
+
+    ctx.fillStyle = '#5CB85C'; // Greenish color
+    ctx.strokeStyle = '#4CAE4C'; // Darker green for border
+    ctx.lineWidth = 3;
+    // Draw button background
+    ctx.beginPath();
+    ctx.moveTo(buttonX + buttonCornerRadius, buttonY);
+    ctx.lineTo(buttonX + buttonWidth - buttonCornerRadius, buttonY);
+    ctx.quadraticCurveTo(buttonX + buttonWidth, buttonY, buttonX + buttonWidth, buttonY + buttonCornerRadius);
+    ctx.lineTo(buttonX + buttonWidth, buttonY + buttonHeight - buttonCornerRadius);
+    ctx.quadraticCurveTo(buttonX + buttonWidth, buttonY + buttonHeight, buttonX + buttonWidth - buttonCornerRadius, buttonY + buttonHeight);
+    ctx.lineTo(buttonX + buttonCornerRadius, buttonY + buttonHeight);
+    ctx.quadraticCurveTo(buttonX, buttonY + buttonHeight, buttonX, buttonY + buttonHeight - buttonCornerRadius);
+    ctx.lineTo(buttonX, buttonY + buttonCornerRadius);
+    ctx.quadraticCurveTo(buttonX, buttonY, buttonX + buttonCornerRadius, buttonY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Button text
+    ctx.font = `bold ${buttonHeight * 0.5}px "Ma Shan Zheng", "KaiTi", sans-serif`;
+    ctx.fillStyle = '#FFFFFF'; // White text
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(buttonText, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
+    ctx.textBaseline = 'alphabetic'; // Reset baseline
+}
+
+function drawPauseButton(ctx, canvas) {
+    const padding = canvas.width * 0.02; // Use a relative padding
+    const buttonSize = Math.min(40, canvas.width * 0.08); // Size with a max cap
+    const buttonX = canvas.width - buttonSize - padding;
+    const buttonY = padding;
+
+    // Store button dimensions for click detection
+    pauseButtonRect = { x: buttonX, y: buttonY, width: buttonSize, height: buttonSize };
+
+    // Button background
+    ctx.fillStyle = 'rgba(200, 200, 200, 0.8)'; // Light grey, slightly transparent
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.9)'; // Darker grey border
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const cornerRadius = buttonSize * 0.2; // Relative corner radius
+    ctx.moveTo(buttonX + cornerRadius, buttonY);
+    ctx.lineTo(buttonX + buttonSize - cornerRadius, buttonY);
+    ctx.quadraticCurveTo(buttonX + buttonSize, buttonY, buttonX + buttonSize, buttonY + cornerRadius);
+    ctx.lineTo(buttonX + buttonSize, buttonY + buttonSize - cornerRadius);
+    ctx.quadraticCurveTo(buttonX + buttonSize, buttonY + buttonSize, buttonX + buttonSize - cornerRadius, buttonY + buttonSize);
+    ctx.lineTo(buttonX + cornerRadius, buttonY + buttonSize);
+    ctx.quadraticCurveTo(buttonX, buttonY + buttonSize, buttonX, buttonY + buttonSize - cornerRadius);
+    ctx.lineTo(buttonX, buttonY + cornerRadius);
+    ctx.quadraticCurveTo(buttonX, buttonY, buttonX + cornerRadius, buttonY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Pause icon ("||")
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Dark icon color
+    const iconBarWidth = buttonSize * 0.15;
+    const iconBarHeight = buttonSize * 0.4;
+    const iconBarSpacing = buttonSize * 0.1; // Spacing between the two bars
+    const totalIconWidth = (iconBarWidth * 2) + iconBarSpacing;
+    
+    const bar1X = buttonX + (buttonSize - totalIconWidth) / 2;
+    const barY = buttonY + (buttonSize - iconBarHeight) / 2;
+    ctx.fillRect(bar1X, barY, iconBarWidth, iconBarHeight);
+    ctx.fillRect(bar1X + iconBarWidth + iconBarSpacing, barY, iconBarWidth, iconBarHeight);
+}
+
+function drawResumeButton(ctx, canvas) {
+    const padding = canvas.width * 0.02;
+    const buttonSize = Math.min(40, canvas.width * 0.08);
+    const buttonX = canvas.width - buttonSize - padding;
+    const buttonY = padding;
+
+    // Store button dimensions for click detection (using pauseButtonRect)
+    pauseButtonRect = { x: buttonX, y: buttonY, width: buttonSize, height: buttonSize };
+
+    // Button background (same style as pause button)
+    ctx.fillStyle = 'rgba(200, 200, 200, 0.8)';
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const cornerRadius = buttonSize * 0.2;
+    ctx.moveTo(buttonX + cornerRadius, buttonY);
+    ctx.lineTo(buttonX + buttonSize - cornerRadius, buttonY);
+    ctx.quadraticCurveTo(buttonX + buttonSize, buttonY, buttonX + buttonSize, buttonY + cornerRadius);
+    ctx.lineTo(buttonX + buttonSize, buttonY + buttonSize - cornerRadius);
+    ctx.quadraticCurveTo(buttonX + buttonSize, buttonY + buttonSize, buttonX + buttonSize - cornerRadius, buttonY + buttonSize);
+    ctx.lineTo(buttonX + cornerRadius, buttonY + buttonSize);
+    ctx.quadraticCurveTo(buttonX, buttonY + buttonSize, buttonX, buttonY + buttonSize - cornerRadius);
+    ctx.lineTo(buttonX, buttonY + cornerRadius);
+    ctx.quadraticCurveTo(buttonX, buttonY, buttonX + cornerRadius, buttonY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Resume icon (Play triangle "►")
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Dark icon color
+    const triangleHeight = buttonSize * 0.4;
+    const triangleSideLength = triangleHeight * (2 / Math.sqrt(3)); // Equilateral triangle
+    const triangleCenterX = buttonX + buttonSize / 2;
+    const triangleCenterY = buttonY + buttonSize / 2;
+
+    ctx.beginPath();
+    // Pointing right:
+    // Top vertex: (centerX - height/sqrt(3)/2, centerY - height/2)
+    // Bottom-left vertex: (centerX - height/sqrt(3)/2, centerY + height/2)
+    // Bottom-right vertex: (centerX + height/sqrt(3), centerY) - this is for pointing up
+    
+    // Corrected for right-pointing triangle:
+    // Left-Top: (centerX - triangleHeight*0.3), (centerY - triangleHeight/2)
+    // Left-Bottom: (centerX - triangleHeight*0.3), (centerY + triangleHeight/2)
+    // Right-Middle: (centerX + triangleHeight*0.6), centerY
+    
+    const point1X = triangleCenterX - (triangleHeight * 0.25); // Shift left part of triangle a bit to the left from center
+    const point1Y = triangleCenterY - (triangleHeight / 2);
+    
+    const point2X = point1X;
+    const point2Y = triangleCenterY + (triangleHeight / 2);
+    
+    const point3X = triangleCenterX + (triangleHeight * 0.5); // Point extends to the right
+    const point3Y = triangleCenterY;
+
+    ctx.moveTo(point1X, point1Y);
+    ctx.lineTo(point2X, point2Y);
+    ctx.lineTo(point3X, point3Y);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawMiniGame(canvas) {
+    if (!canvas) {
+        console.warn("drawMiniGame called without a canvas element.");
+        return;
+    }
+    // Match canvas internal resolution to its display size
+    if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error("Failed to get 2D context from canvas.");
+        return;
+    }
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (currentGameState === GAME_STATES.READY) {
+        drawReadyScreen(ctx, canvas);
+        pauseButtonRect = null; 
+    } else if (currentGameState === GAME_STATES.RUNNING) {
+        startButtonRect = null;
+        drawMonsterAndScene(ctx, canvas);
+        drawPauseButton(ctx, canvas);
+        drawTimerDisplay(ctx, canvas);
+    } else if (currentGameState === GAME_STATES.PAUSED) {
+        startButtonRect = null;
+        drawMonsterAndScene(ctx, canvas); 
+        // Optional: Add a visual cue for pause, like dimming, if desired later.
+        // For now, just the scene, resume button, and timer are shown.
+        drawResumeButton(ctx, canvas);
+        drawTimerDisplay(ctx, canvas);
+    } else if (currentGameState === GAME_STATES.END) {
+        startButtonRect = null;
+        pauseButtonRect = null; // Ensure no interactive buttons from other states
+        drawMonsterAndScene(ctx, canvas); // Show the final scene
+        drawTimerDisplay(ctx, canvas); // Show timer at 0
+
+        // Game Over Message
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, canvas.height * 0.3, canvas.width, canvas.height * 0.4); // Background for message
+        
+        ctx.font = `bold ${canvas.width * 0.1}px "Ma Shan Zheng", "KaiTi", sans-serif`;
+        ctx.fillStyle = '#D9534F'; // Reddish color like the title
+        ctx.textAlign = 'center';
+        ctx.fillText('游戏结束', canvas.width / 2, canvas.height / 2); // "Game Over"
+        ctx.textAlign = 'left'; // Reset
+    }
+
+    // Draw game state indicator (should be on top of everything)
+    drawGameStateIndicator(ctx, canvas);
+}
+
+// --- Event Handlers for Game Canvas ---
+function handleGameCanvasClick(event) {
+    const rect = gameCanvas.getBoundingClientRect();
+    const scaleX = gameCanvas.width / rect.width;
+    const scaleY = gameCanvas.height / rect.height;
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+
+    if (currentGameState === GAME_STATES.READY && startButtonRect) {
+        if (x >= startButtonRect.x && x <= startButtonRect.x + startButtonRect.width &&
+            y >= startButtonRect.y && y <= startButtonRect.y + startButtonRect.height) {
+            setGameState(GAME_STATES.RUNNING);
+            return; // Click handled
+        }
+    } else if (currentGameState === GAME_STATES.RUNNING && pauseButtonRect) {
+        if (x >= pauseButtonRect.x && x <= pauseButtonRect.x + pauseButtonRect.width &&
+            y >= pauseButtonRect.y && y <= pauseButtonRect.y + pauseButtonRect.height) {
+            setGameState(GAME_STATES.PAUSED);
+            return; // Click handled
+        }
+    } else if (currentGameState === GAME_STATES.PAUSED && pauseButtonRect) {
+        if (x >= pauseButtonRect.x && x <= pauseButtonRect.x + pauseButtonRect.width &&
+            y >= pauseButtonRect.y && y <= pauseButtonRect.y + pauseButtonRect.height) {
+            setGameState(GAME_STATES.RUNNING); // Resume game
+            return; // Click handled
+        }
+    }
+    // Potentially other click handlers for different states later
+}
+
+function handleGameCanvasMouseMove(event) {
+    if (!gameCanvas) return; // Ensure canvas exists
+
+    const rect = gameCanvas.getBoundingClientRect();
+    const scaleX = gameCanvas.width / rect.width;
+    const scaleY = gameCanvas.height / rect.height;
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+
+    let isOverButton = false;
+
+    if (currentGameState === GAME_STATES.READY && startButtonRect) {
+        if (x >= startButtonRect.x && x <= startButtonRect.x + startButtonRect.width &&
+            y >= startButtonRect.y && y <= startButtonRect.y + startButtonRect.height) {
+            isOverButton = true;
+        }
+    } else if (currentGameState === GAME_STATES.RUNNING && pauseButtonRect) {
+        if (x >= pauseButtonRect.x && x <= pauseButtonRect.x + pauseButtonRect.width &&
+            y >= pauseButtonRect.y && y <= pauseButtonRect.y + pauseButtonRect.height) {
+            isOverButton = true;
+        }
+    } else if (currentGameState === GAME_STATES.PAUSED && pauseButtonRect) { // Added check for PAUSED state
+        if (x >= pauseButtonRect.x && x <= pauseButtonRect.x + pauseButtonRect.width &&
+            y >= pauseButtonRect.y && y <= pauseButtonRect.y + pauseButtonRect.height) {
+            isOverButton = true;
+        }
+    }
+    // Later, add checks for END state buttons if any
+
+    gameCanvas.style.cursor = isOverButton ? 'pointer' : 'default';
+}
 
 // --- Initialization ---
 window.addEventListener('load', () => {
@@ -393,6 +850,7 @@ window.addEventListener('load', () => {
     playModeButton = document.getElementById('play-mode-button');
     learnContentArea = document.getElementById('learn-content');
     miniGameSection = document.getElementById('mini-game-section');
+    gameCanvas = document.getElementById('gameCanvas'); // Initialize gameCanvas
 
     initializeAudio(); 
     setupTitleBar();
@@ -440,8 +898,9 @@ window.addEventListener('load', () => {
                     if (currentActiveMode === 'learn') {
                         loadLessonContent(currentSelectedLessonId);
                     } else if (currentActiveMode === 'play') {
-                        // Placeholder for refreshing game content if/when it becomes dynamic
-                        console.log("Refreshing play mode (currently static).");
+                        if (gameCanvas) { // Add a check for gameCanvas
+                            drawMiniGame(gameCanvas);
+                        }
                     }
 
                 } catch (e) {
@@ -476,13 +935,23 @@ window.addEventListener('load', () => {
     loadLessonContent(currentSelectedLessonId); // Initial content load for learn mode
 
     window.addEventListener('resize', () => {
-        const sentenceList = document.getElementById('sentence-list');
-        if (currentActiveMode === 'learn' && sentenceList && sentenceList.innerHTML !== '' && sentenceList.textContent && !sentenceList.textContent.startsWith("请选择课程")) {
-             if (!lessonGridPopup || !lessonGridPopup.classList.contains('active')) {
-                const currentSentencesElements = Array.from(sentenceList.querySelectorAll('.sentence-text-underneath'))
-                                                    .map(el => el.textContent || "");
-                populateSentenceSection(currentSentencesElements);
+        if (currentActiveMode === 'learn') {
+            const sentenceList = document.getElementById('sentence-list');
+            if (sentenceList && sentenceList.innerHTML !== '' && sentenceList.textContent && !sentenceList.textContent.startsWith("请选择课程")) {
+                if (!lessonGridPopup || !lessonGridPopup.classList.contains('active')) {
+                    const currentSentencesElements = Array.from(sentenceList.querySelectorAll('.sentence-text-underneath'))
+                                                        .map(el => el.textContent || "");
+                    populateSentenceSection(currentSentencesElements);
+                }
             }
+        } else if (currentActiveMode === 'play' && gameCanvas) {
+            // Redraw mini-game on resize, current state will determine what's drawn
+            drawMiniGame(gameCanvas); 
         }
     });
+
+    if (gameCanvas) {
+        gameCanvas.addEventListener('click', handleGameCanvasClick);
+        gameCanvas.addEventListener('mousemove', handleGameCanvasMouseMove);
+    }
 });
