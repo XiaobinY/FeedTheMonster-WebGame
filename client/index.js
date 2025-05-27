@@ -401,6 +401,17 @@ function switchMode(newMode) {
         
         miniGameSection.classList.remove('hidden-view');
         learnContentArea.classList.add('hidden-view');
+
+        if (gameCanvas) { // Ensure gameCanvas exists
+            console.log(`Attempting to set canvas dimensions in switchMode. ClientW: ${gameCanvas.clientWidth}, ClientH: ${gameCanvas.clientHeight}`);
+            if (gameCanvas.clientWidth > 0 && gameCanvas.clientHeight > 0) {
+                gameCanvas.width = gameCanvas.clientWidth;
+                gameCanvas.height = gameCanvas.clientHeight;
+                console.log(`Set canvas dimensions in switchMode to W: ${gameCanvas.width}, H: ${gameCanvas.height}`);
+            } else {
+                console.warn("Canvas clientWidth or clientHeight is 0 in switchMode. Dimensions not set yet.");
+            }
+        }
         setGameState(GAME_STATES.READY); // Explicitly set to READY
         // drawMiniGame(gameCanvas); // This will be called by setGameState
     }
@@ -594,11 +605,107 @@ function drawMonsterAndScene(ctx, canvas) {
     ctx.beginPath();
     ctx.arc(monsterX + monsterWidth / 2, monsterY + monsterHeight / 2 + smileCenterYOffset, smileRadius, 0, Math.PI, false);
     ctx.stroke();
+
+    drawCandies(ctx, canvas);
 }
 
+// --- Drawing Candies ---
+function drawCandies(ctx, canvas) {
+    // Candy 1: Swirl Lollipop (Top-Left)
+    const lollipopRadius = Math.min(canvas.width, canvas.height) * 0.03; // Responsive radius
+    const lollipopX = canvas.width * 0.08; 
+    const lollipopY = canvas.height * 0.1; 
+    const stickHeight = lollipopRadius * 2;
+    const stickWidth = Math.max(2, lollipopRadius * 0.15);
+
+    // Stick
+    ctx.fillStyle = '#A0522D'; // Sienna (brownish for stick)
+    ctx.fillRect(lollipopX - stickWidth / 2, lollipopY, stickWidth, stickHeight);
+
+    // Lollipop head
+    const gradLollipop = ctx.createRadialGradient(lollipopX, lollipopY, lollipopRadius * 0.2, lollipopX, lollipopY, lollipopRadius);
+    gradLollipop.addColorStop(0, '#FFC0CB'); // LightPink center
+    gradLollipop.addColorStop(0.7, '#FF69B4'); // HotPink
+    gradLollipop.addColorStop(1, '#FF1493'); // DeepPink edge
+    ctx.fillStyle = gradLollipop;
+    ctx.beginPath();
+    ctx.arc(lollipopX, lollipopY, lollipopRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Swirl
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; // White with some transparency
+    ctx.lineWidth = Math.max(1, lollipopRadius * 0.18);
+    const numTurns = 3;
+    for (let i = 0; i < numTurns * 2; i++) {
+        ctx.beginPath();
+        ctx.arc(lollipopX, lollipopY, lollipopRadius * (0.9 - (i * 0.15)), (i * Math.PI / numTurns), ((i + 0.8) * Math.PI / numTurns) + (Math.PI / (numTurns * (i * 0.1 +1) )) , false);
+        ctx.stroke();
+    }
+
+
+    // Candy 2: Wrapped Candy (Top-Right)
+    const wrappedCandyBaseSize = Math.min(canvas.width, canvas.height) * 0.04;
+    const wrappedCandyWidth = wrappedCandyBaseSize * 2;
+    const wrappedCandyHeight = wrappedCandyBaseSize;
+    const wrappedCandyX = canvas.width - (canvas.width * 0.15); 
+    const wrappedCandyY = canvas.height * 0.08; 
+    const wrapperTwistSize = wrappedCandyHeight * 0.5;
+
+    // Main candy body (shiny red)
+    const gradCandyBody = ctx.createLinearGradient(wrappedCandyX, wrappedCandyY, wrappedCandyX, wrappedCandyY + wrappedCandyHeight);
+    gradCandyBody.addColorStop(0, '#FF4D4D'); // Lighter Red
+    gradCandyBody.addColorStop(0.5, '#FF0000'); // Red
+    gradCandyBody.addColorStop(1, '#B30000'); // Darker Red
+    ctx.fillStyle = gradCandyBody;
+    ctx.fillRect(wrappedCandyX, wrappedCandyY, wrappedCandyWidth, wrappedCandyHeight);
+    
+    // White stripes with slight transparency for a softer look
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'; 
+    const stripeWidth = wrappedCandyWidth / 5; // 5 stripes
+    for (let i = 0; i < 5; i += 2) { // Draw 3 white stripes (0, 2, 4)
+         ctx.fillRect(wrappedCandyX + (i * stripeWidth), wrappedCandyY, stripeWidth, wrappedCandyHeight);
+    }
+    
+    ctx.strokeStyle = 'rgba(128, 0, 0, 0.7)'; // Darker red for border, slightly transparent
+    ctx.lineWidth = 1;
+    ctx.strokeRect(wrappedCandyX, wrappedCandyY, wrappedCandyWidth, wrappedCandyHeight);
+
+
+    // Wrapper twists (shiny silver/gray)
+    const gradWrapper = ctx.createLinearGradient(0, wrappedCandyY - wrapperTwistSize, 0, wrappedCandyY + wrappedCandyHeight + wrapperTwistSize);
+    gradWrapper.addColorStop(0, '#E0E0E0'); // Lighter gray
+    gradWrapper.addColorStop(0.5, '#C0C0C0'); // Silver
+    gradWrapper.addColorStop(1, '#A0A0A0'); // Darker gray
+    ctx.fillStyle = gradWrapper;
+    
+    // Left twist
+    ctx.beginPath();
+    ctx.moveTo(wrappedCandyX, wrappedCandyY);
+    ctx.lineTo(wrappedCandyX - wrapperTwistSize, wrappedCandyY - wrapperTwistSize * 0.8);
+    ctx.lineTo(wrappedCandyX - wrapperTwistSize * 1.2, wrappedCandyY + wrappedCandyHeight / 2); // Midpoint pinch
+    ctx.lineTo(wrappedCandyX - wrapperTwistSize, wrappedCandyY + wrappedCandyHeight + wrapperTwistSize * 0.8);
+    ctx.lineTo(wrappedCandyX, wrappedCandyY + wrappedCandyHeight);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke(); // Add a stroke for definition
+
+    // Right twist
+    ctx.beginPath();
+    ctx.moveTo(wrappedCandyX + wrappedCandyWidth, wrappedCandyY);
+    ctx.lineTo(wrappedCandyX + wrappedCandyWidth + wrapperTwistSize, wrappedCandyY - wrapperTwistSize * 0.8);
+    ctx.lineTo(wrappedCandyX + wrappedCandyWidth + wrapperTwistSize * 1.2, wrappedCandyY + wrappedCandyHeight / 2); // Midpoint pinch
+    ctx.lineTo(wrappedCandyX + wrappedCandyWidth + wrapperTwistSize, wrappedCandyY + wrappedCandyHeight + wrapperTwistSize * 0.8);
+    ctx.lineTo(wrappedCandyX + wrappedCandyWidth, wrappedCandyY + wrappedCandyHeight);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke(); // Add a stroke for definition
+}
+
+
 function drawReadyScreen(ctx, canvas) {
+    drawMonsterAndScene(ctx, canvas);
     // Semi-transparent overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; // Keep the semi-transparent overlay for focus
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'; // Was rgba(0, 0, 0, 0.5)
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Panel dimensions
@@ -775,6 +882,7 @@ function drawResumeButton(ctx, canvas) {
 }
 
 function drawMiniGame(canvas) {
+    console.log(`drawMiniGame called. Canvas clientW: ${canvas.clientWidth}, clientH: ${canvas.clientHeight}, canvas.width: ${canvas.width}, canvas.height: ${canvas.height}`);
     if (!canvas) {
         console.warn("drawMiniGame called without a canvas element.");
         return;
@@ -833,8 +941,9 @@ function drawMiniGame(canvas) {
 
 // --- Drawing End Screen ---
 function drawEndScreen(ctx, canvas) {
+    drawMonsterAndScene(ctx, canvas);
     // Semi-transparent overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'; // Consistent transparency
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Panel dimensions (same as drawReadyScreen for consistency)
