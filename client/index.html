@@ -10,6 +10,11 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body> 
+    <nav id="app-navigation-bar" class="app-nav">
+        <button id="nav-read-chinese" class="nav-button">读中文</button>
+        <button id="nav-play-chinese" class="nav-button">玩中文</button>
+        <button id="nav-math-fun" class="nav-button">Math Fun</button>
+    </nav>
     <header class="title-bar">
         <h1 id="main-title" class="text-4xl md:text-5xl lg:text-6xl">我爱学中文</h1>
         <button id="refresh-content-button" aria-label="Refresh content" title="Refresh words and sentences">
@@ -23,17 +28,6 @@
         <button id="lesson-selector-trigger" aria-haspopup="true" aria-expanded="false">
             <span id="current-lesson-name-display"></span>
             <span class="arrow-down">▼</span>
-        </button>
-    </div>
-
-    <div id="mode-switcher-container">
-        <button id="learn-mode-button" class="mode-button" aria-pressed="true">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 22H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1zm-1-2V4H5v16h14zM17 6H7v2h10V6zm-4 4H7v2h6v-2zm4 4H7v2h10v-2z"></path></svg>
-            学习
-        </button>
-        <button id="play-mode-button" class="mode-button" aria-pressed="false">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.5 9.33A4.001 4.001 0 0 0 15 4H9a4 4 0 0 0-3.5 5.33L2 13v4l2 2h5v-2H5.71l1.5-1.5a5.98 5.98 0 0 1 4.79-.5a5.98 5.98 0 0 1 4.79.5l1.5 1.5H17v2h5l2-2v-4l-3.5-3.67zM9 6h6a2 2 0 0 1 2 2v1H7V8a2 2 0 0 1 2-2zm11 9.46L18.29 17H14a4 4 0 0 0-4-4a4 4 0 0 0-4 4H5.71L4 15.46V14l2.5-2.67A2.003 2.003 0 0 1 9 10h6a2 2 0 0 1 2.5 1.33L20 14v1.46zM12 15a1 1 0 1 1 0-2a1 1 0 0 1 0 2z"></path></svg>
-            游戏
         </button>
     </div>
 
@@ -64,6 +58,12 @@
 
         <section id="mini-game-section" aria-labelledby="mini-game-title" class="my-5 hidden-view">
             <canvas id="gameCanvas"></canvas>
+        </section>
+        <section id="math-fun-content" class="my-5 hidden-view" aria-labelledby="math-fun-title">
+            <h2 id="math-fun-title" class="text-3xl md:text-4xl">Math Fun</h2>
+            <div class="mt-5 text-center">
+                <p>The Math Fun page is under construction. Check back later!</p>
+            </div>
         </section>
     </main>
     
