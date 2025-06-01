@@ -26,7 +26,7 @@ const SCREEN_COLORS = {
 let currentSelectedLessonId = "all_random";
 let currentSelectedLessonName = "所有课程 (随机)";
 let isCardEffectAnimating = false; // Flag to prevent spamming card effects
-let currentActiveMode = 'learn'; // 'learn' or 'play'
+let currentPage = 'read'; // 'read', 'play', or 'math'
 
 const GAME_STATES = {
     READY: 'READY',
@@ -50,11 +50,13 @@ let lessonGridPopupContent;
 let popupOverlay;
 let refreshButton;
 let pageRefreshOverlay; 
-let learnModeButton;
-let playModeButton;
 let learnContentArea;
 let miniGameSection;
 let gameCanvas; // Added for the mini-game
+let navReadChineseButton;
+let navPlayChineseButton;
+let navMathFunButton;
+let mathFunContentArea;
 
 // --- Helper Functions ---
 function getRandomElements(arr, count) {
@@ -376,44 +378,42 @@ function loadLessonContent(selectedLessonId) {
     populateSentenceSection(sentencesForDisplay);
 }
 
-// --- Mode Switcher Logic ---
-function switchMode(newMode) {
-    currentActiveMode = newMode;
+// --- Navigation Logic ---
+function navigateTo(pageId) {
+    currentPage = pageId;
 
-    if (!learnModeButton || !playModeButton || !learnContentArea || !miniGameSection) {
-        console.error("switchMode - One or more mode-related DOM elements not found.");
-        return;
-    }
+    // Hide all content areas
+    if (learnContentArea) learnContentArea.classList.add('hidden-view');
+    if (miniGameSection) miniGameSection.classList.add('hidden-view');
+    if (mathFunContentArea) mathFunContentArea.classList.add('hidden-view');
 
-    if (newMode === 'learn') {
-        learnModeButton.classList.add('active-mode');
-        learnModeButton.setAttribute('aria-pressed', 'true');
-        playModeButton.classList.remove('active-mode');
-        playModeButton.setAttribute('aria-pressed', 'false');
+    // Remove active class from all nav buttons
+    if (navReadChineseButton) navReadChineseButton.classList.remove('active-nav-button');
+    if (navPlayChineseButton) navPlayChineseButton.classList.remove('active-nav-button');
+    if (navMathFunButton) navMathFunButton.classList.remove('active-nav-button');
 
-        learnContentArea.classList.remove('hidden-view');
-        miniGameSection.classList.add('hidden-view');
-    } else if (newMode === 'play') {
-        playModeButton.classList.add('active-mode');
-        playModeButton.setAttribute('aria-pressed', 'true');
-        learnModeButton.classList.remove('active-mode');
-        learnModeButton.setAttribute('aria-pressed', 'false');
-        
-        miniGameSection.classList.remove('hidden-view');
-        learnContentArea.classList.add('hidden-view');
-
-        if (gameCanvas) { // Ensure gameCanvas exists
-            console.log(`Attempting to set canvas dimensions in switchMode. ClientW: ${gameCanvas.clientWidth}, ClientH: ${gameCanvas.clientHeight}`);
-            if (gameCanvas.clientWidth > 0 && gameCanvas.clientHeight > 0) {
-                gameCanvas.width = gameCanvas.clientWidth;
-                gameCanvas.height = gameCanvas.clientHeight;
-                console.log(`Set canvas dimensions in switchMode to W: ${gameCanvas.width}, H: ${gameCanvas.height}`);
-            } else {
-                console.warn("Canvas clientWidth or clientHeight is 0 in switchMode. Dimensions not set yet.");
-            }
+    // Show the selected content area and set active button
+    if (pageId === 'read') {
+        if (learnContentArea) learnContentArea.classList.remove('hidden-view');
+        if (navReadChineseButton) navReadChineseButton.classList.add('active-nav-button');
+        // Ensure lesson content is loaded if it's the first time or relevant
+        loadLessonContent(currentSelectedLessonId);
+    } else if (pageId === 'play') {
+        if (miniGameSection) miniGameSection.classList.remove('hidden-view');
+        if (navPlayChineseButton) navPlayChineseButton.classList.add('active-nav-button');
+        if (gameCanvas) {
+            // Ensure canvas is sized correctly and game is drawn
+            requestAnimationFrame(() => { // Use rAF to ensure layout is stable
+                if (gameCanvas.clientWidth > 0 && gameCanvas.clientHeight > 0) {
+                    gameCanvas.width = gameCanvas.clientWidth;
+                    gameCanvas.height = gameCanvas.clientHeight;
+                }
+                setGameState(GAME_STATES.READY); // Or drawMiniGame directly if READY handles it
+            });
         }
-        setGameState(GAME_STATES.READY); // Explicitly set to READY
-        // drawMiniGame(gameCanvas); // This will be called by setGameState
+    } else if (pageId === 'math') {
+        if (mathFunContentArea) mathFunContentArea.classList.remove('hidden-view');
+        if (navMathFunButton) navMathFunButton.classList.add('active-nav-button');
     }
 }
 
@@ -427,7 +427,7 @@ function setGameState(newState) {
 
     // If the game is active, trigger a redraw.
     // The drawMiniGame function will handle drawing based on the new currentGameState.
-    if (currentActiveMode === 'play' && gameCanvas) {
+    if (currentPage === 'play' && gameCanvas) {
         drawMiniGame(gameCanvas); // Initial draw for the new state
     }
 
@@ -454,7 +454,7 @@ function startGameTimer() {
                 return; // Exit interval callback as setGameState(END) will handle drawing
             }
             // Redraw to update timer display and other game elements if still RUNNING
-            if (gameCanvas && currentActiveMode === 'play' && currentGameState === GAME_STATES.RUNNING) {
+            if (gameCanvas && currentPage === 'play' && currentGameState === GAME_STATES.RUNNING) {
                  drawMiniGame(gameCanvas);
             }
         }
@@ -895,7 +895,7 @@ function drawMiniGame(canvas) {
             // Attempt to redraw. It's crucial that 'canvas' is still the correct element.
             // If game state or mode could change by the next frame, this might need more robust handling,
             // but for now, a simple deferred call should work for the tab switch issue.
-            if (currentActiveMode === 'play') { // Only redraw if still in play mode
+            if (currentPage === 'play') { // Only redraw if still in play mode
                 drawMiniGame(canvas);
             }
         });
@@ -1097,11 +1097,13 @@ window.addEventListener('load', () => {
     refreshButton = document.getElementById('refresh-content-button');
     pageRefreshOverlay = document.getElementById('page-refresh-overlay');
 
-    learnModeButton = document.getElementById('learn-mode-button');
-    playModeButton = document.getElementById('play-mode-button');
     learnContentArea = document.getElementById('learn-content');
     miniGameSection = document.getElementById('mini-game-section');
     gameCanvas = document.getElementById('gameCanvas'); // Initialize gameCanvas
+    navReadChineseButton = document.getElementById('nav-read-chinese');
+    navPlayChineseButton = document.getElementById('nav-play-chinese');
+    navMathFunButton = document.getElementById('nav-math-fun');
+    mathFunContentArea = document.getElementById('math-fun-content');
 
     initializeAudio(); 
     setupTitleBar();
@@ -1114,15 +1116,18 @@ window.addEventListener('load', () => {
         popupOverlay.addEventListener('click', toggleLessonGridPopup);
     }
 
-    if (learnModeButton) {
-        learnModeButton.addEventListener('click', () => switchMode('learn'));
+    if (navReadChineseButton) {
+        navReadChineseButton.addEventListener('click', () => navigateTo('read'));
     }
-    if (playModeButton) {
-        playModeButton.addEventListener('click', () => switchMode('play'));
+    if (navPlayChineseButton) {
+        navPlayChineseButton.addEventListener('click', () => navigateTo('play'));
+    }
+    if (navMathFunButton) {
+        navMathFunButton.addEventListener('click', () => navigateTo('math'));
     }
     
-    // Set initial mode
-    switchMode(currentActiveMode); 
+    // Set initial page
+    navigateTo(currentPage);
 
     if (refreshButton) {
         const MIN_ANIMATION_DURATION = 700; 
@@ -1146,17 +1151,22 @@ window.addEventListener('load', () => {
                         await initializeAudio(); 
                     }
 
-                    if (currentActiveMode === 'learn') {
+                    if (currentPage === 'read') {
                         loadLessonContent(currentSelectedLessonId);
-                    } else if (currentActiveMode === 'play') {
-                        if (gameCanvas) { // Add a check for gameCanvas
-                            drawMiniGame(gameCanvas);
+                    } else if (currentPage === 'play') {
+                        if (gameCanvas) {
+                            // Reset or redraw the game. Setting to READY is a common way.
+                            setGameState(GAME_STATES.READY);
+                            // drawMiniGame(gameCanvas); // drawMiniGame is called by setGameState
                         }
+                    } else if (currentPage === 'math') {
+                        // Math page refresh logic - currently none needed
+                        console.log("Refreshed Math Fun page (no action).");
                     }
 
                 } catch (e) {
                     console.error("Error during refresh process (audio or content loading):", e);
-                    if (currentActiveMode === 'learn') {
+                    if (currentPage === 'read') {
                          loadLessonContent(currentSelectedLessonId); // Still try to load content
                     }
                 } finally {
@@ -1183,10 +1193,10 @@ window.addEventListener('load', () => {
         console.error("Refresh button #refresh-content-button NOT found.");
     }
 
-    loadLessonContent(currentSelectedLessonId); // Initial content load for learn mode
+    // loadLessonContent(currentSelectedLessonId); // Initial content load - Handled by navigateTo(currentPage)
 
     window.addEventListener('resize', () => {
-        if (currentActiveMode === 'learn') {
+        if (currentPage === 'read') {
             const sentenceList = document.getElementById('sentence-list');
             if (sentenceList && sentenceList.innerHTML !== '' && sentenceList.textContent && !sentenceList.textContent.startsWith("请选择课程")) {
                 if (!lessonGridPopup || !lessonGridPopup.classList.contains('active')) {
@@ -1195,9 +1205,13 @@ window.addEventListener('load', () => {
                     populateSentenceSection(currentSentencesElements);
                 }
             }
-        } else if (currentActiveMode === 'play' && gameCanvas) {
-            // Redraw mini-game on resize, current state will determine what's drawn
-            drawMiniGame(gameCanvas); 
+        } else if (currentPage === 'play' && gameCanvas) {
+            // Ensure canvas is resized and game redrawn
+            if (gameCanvas.clientWidth > 0 && gameCanvas.clientHeight > 0) {
+                 gameCanvas.width = gameCanvas.clientWidth;
+                 gameCanvas.height = gameCanvas.clientHeight;
+            }
+            drawMiniGame(gameCanvas); // Redraw based on current game state
         }
     });
 
